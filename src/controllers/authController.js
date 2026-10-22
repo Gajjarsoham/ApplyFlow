@@ -125,7 +125,6 @@ const login = async (req, res, next) => {
 
         return res.status(200).json({
             message: 'Login successful',
-            token,
             user: {
                 id: user._id,
                 name: user.name,
@@ -134,9 +133,22 @@ const login = async (req, res, next) => {
         });
 
 
-    } catch (error) {
+    } catch (err) {
         next(err);
     }
 }
 
-module.exports = { register, login };
+const logout = async (req, res, next) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/'
+    });
+
+    return res.status(200).json({
+        message: 'Logout successful'
+    });
+}
+
+module.exports = { register, login, logout };
