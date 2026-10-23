@@ -59,4 +59,72 @@ const updateApplicationSchema = z
         message: "Provide at least one field to update.",
     });
 
-module.exports = { createApplicationSchema, updateApplicationSchema };
+const listApplicationsQuerySchema = z
+    .object({
+        search: z.string().trim().max(100).optional(),
+
+        status: z.enum(applicationStatuses).optional(),
+
+        jobType: z.enum(jobTypes).optional(),
+
+        location: z.string().trim().max(100).optional(),
+
+        startDate: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/, {
+                message: "startDate must use YYYY-MM-DD format.",
+            })
+            .refine((value) => {
+                const date = new Date(`${value}T00:00:00.000Z`);
+                return (
+                    !Number.isNaN(date.getTime()) &&
+                    date.toISOString().slice(0, 10) === value
+                );
+            }, {
+                message: "startDate must be a valid calendar date.",
+            })
+            .optional(),
+
+        endDate: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/, {
+                message: "endDate must use YYYY-MM-DD format.",
+            })
+            .refine((value) => {
+                const date = new Date(`${value}T00:00:00.000Z`);
+                return (
+                    !Number.isNaN(date.getTime()) &&
+                    date.toISOString().slice(0, 10) === value
+                );
+            }, {
+                message: "endDate must be a valid calendar date.",
+            })
+            .optional(),
+
+        sortBy: z.enum([
+            "createdAt",
+            "updatedAt",
+            "applicationDate",
+            "company",
+            "jobTitle",
+        ]).default("createdAt"),
+
+        order: z.enum(["asc", "desc"]).default("desc"),
+
+        page: z.coerce.number().int().min(1).default(1),
+
+        limit: z.coerce.number().int().min(1).max(100).default(10),
+    })
+    .strict()
+    .refine(
+        (query) =>
+            !query.startDate ||
+            !query.endDate ||
+            query.startDate <= query.endDate,
+        {
+            message: "startDate cannot be later than endDate.",
+            path: ["startDate"],
+        }
+    );
+
+module.exports = { createApplicationSchema, updateApplicationSchema, listApplicationsQuerySchema };
