@@ -3,7 +3,7 @@ const { createApplicationSchema, updateApplicationSchema } = require("../validat
 const mongoose = require('mongoose')
 
 const createApplication = async (req, res, next) => {
-    try{
+    try {
         const result = createApplicationSchema.safeParse(req.body);
 
         if (!result.success) {
@@ -65,7 +65,7 @@ const getApplicationById = async (req, res, next) => {
             user: req.user.id,
         });
 
-        if(!application) {
+        if (!application) {
             return res.status(404).json({
                 success: false,
                 message: "Application not found.",
@@ -86,7 +86,7 @@ const updateApplication = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        if(!mongoose.isObjectIdOrHexString(id)) {
+        if (!mongoose.isObjectIdOrHexString(id)) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid application ID.",
@@ -141,12 +141,17 @@ const deleteApplication = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        if(!mongoose.isObjectIdOrHexString(id)) {
+        if (!mongoose.isObjectIdOrHexString(id)) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid applicaion ID.",
             });
         }
+
+        const application = await Application.findOneAndDelete({
+            _id: id,
+            user: req.user.id,
+        });
 
         return res.status(200).json({
             success: true,
@@ -154,14 +159,14 @@ const deleteApplication = async (req, res, next) => {
         });
 
     } catch (error) {
-        next (error);
+        next(error);
     }
 };
 
-module.exports = { 
-    createApplication, 
-    listApplications, 
-    getApplicationById, 
-    updateApplication, 
-    deleteApplication 
+module.exports = {
+    createApplication,
+    listApplications,
+    getApplicationById,
+    updateApplication,
+    deleteApplication
 };
