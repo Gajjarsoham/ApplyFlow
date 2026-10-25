@@ -273,10 +273,133 @@ const deleteApplication = async (req, res, next) => {
     }
 };
 
+const getApplicationStats = async (req, res, next) => {
+    try {
+        const userId = new mongoose.Types.ObjectId(req.user.id);
+
+        const [
+            statusCounts,
+            jobTypeCounts,
+            applicationsOverTime,
+        ] = await Promise.all([
+            Application.aggregate([
+                { $match: { user: userId } },
+                {
+                    $group: {
+                        _id: "$status",
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
+
+            Application.aggregate([
+                { $match: { user: userId } },
+                {
+                    $group: {
+                        _id: "$jobType",
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
+
+            Application.aggregate([
+                { $match: { user: userId } },
+                {
+                    $group: {
+                        _id: {
+                            $dateToString: {
+                                format: "%Y-%m",
+                                date: "$createdAt",
+                            },
+                        },
+                        count: { $sum: 1 },
+                    },
+                },
+                { $sort: { _id: 1 } },
+            ]),
+        ]);
+
+        const statuses = [
+            "applied",
+            "pending",
+            "interview",
+            "offer",
+            "accepted",
+            "rejected",
+            "withdrawn",
+        ];
+
+        const counts = Object.fromEntries(
+            statuses.map((status) => [status, 0])
+        );
+
+        for (const item of statusCounts) {
+            counts[item._id] = item.count;
+        }
+
+        const totalApplications = Object.values(counts).reduce(
+            (total, count) => total + count,
+            0
+        );
+
+        const jobTypes = Object.fromEntries(
+            [
+                "full-time",
+                "part-time",
+                "contract",
+                "internship",
+                "temporary",
+                "freelance",
+            ].map((type) => [type, 0])
+        );
+
+        let unspecifiedJobType = 0;
+
+        for (const item of jobTypeCounts) {
+            if (item._id == null) {
+                unspecifiedJobType = item.count;
+            } else if (
+                Object.prototype.hasOwnProperty.call(jobTypes, item._id)
+            ) {
+                jobTypes[item._id] = item.count;
+            }
+        }
+
+        const acceptanceRate = totalApplications === 0
+            ? 0
+            : Number(
+                ((counts.accepted / totalApplications) * 100).toFixed(2)
+            );
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                totalApplications,
+                statusCounts: counts,
+                interviewCount: counts.interview,
+                offerCount: counts.offer,
+                acceptanceRate,
+                acceptanceRateDenominator: "totalApplications",
+                applicationsByJobType: {
+                    ...jobTypes,
+                    unspecified: unspecifiedJobType,
+                },
+                applicationsOverTime: applicationsOverTime.map((item) => ({
+                    month: item._id,
+                    count: item.count,
+                })),
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     createApplication,
     listApplications,
     getApplicationById,
     updateApplication,
-    deleteApplication
+    deleteApplication,
+    getApplicationStats,
 };

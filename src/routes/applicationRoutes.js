@@ -5,7 +5,8 @@ const {
     listApplications, 
     getApplicationById, 
     updateApplication,
-    deleteApplication, 
+    deleteApplication,
+    getApplicationStats, 
 } = require("../controllers/applicationController");
 
 const router = express.Router();
@@ -15,6 +16,7 @@ router.use(authMiddleware);
 // Application routes
 router.post("/", createApplication);
 router.get("/", listApplications);
+router.get("/stats", getApplicationStats);
 router.get("/:id", getApplicationById);
 router.patch("/:id", updateApplication);
 router.delete("/:id", deleteApplication);
